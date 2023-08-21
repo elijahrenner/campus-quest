@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Compass</title>
+
+<style>
+    
+    html, body {
+        height: 100vh; /* Set the height of both the html and body to 100% of viewport height */
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevent scrolling */
+    }
+    .content {
+        height:100vh;
+        position: relative; 
+    }
+    .background {
+        position: absolute; /* Centering */
+        top: 50%; /* Centering */
+        left: 50%; /* Centering */
+        margin: -45vh 0 0 -45vw; /* Centering (half of viewport height/width) */
+        
+        height: 90vh;
+        width: 90vw;
+        background-color: #555;
+        border-radius: 10px;
+    }
+    .checkbox_container {
+        background-color: aliceblue;
+        height: 100%;
+        width: 33.33%;
+
+        overflow-y: scroll; /* Scrolling feature*/
+        text-align: center;
+    }
+    
+</style>
+</head>
+
+<body>
+    <div class="content">
+        <div class="background">
+            <div class="checkbox_container"></div>
+        </div>
+    </div>  
+    <script src="colleges.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
