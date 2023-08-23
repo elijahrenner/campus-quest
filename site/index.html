@@ -29,25 +29,42 @@
         background-color: #555;
         border-radius: 10px;
     }
-    .checkbox_container {
+    .colleges_container { /* Long list*/
         background-color: aliceblue;
         height: 100%;
         width: 33.33%;
 
         overflow-y: scroll; /* Scrolling feature*/
-        text-align: center;
+    }
+    .college_container { /* Individual container*/
+        height: 150px;
+        background-color: rgb(183, 222, 255);
+
+        display:flex;
+        justify-content:center;
+        align-items:  center;
+    }
+
+    .checkbox { /* College name checkbox*/
+
     }
     
+    .submit {
+        
+    }
+
 </style>
 </head>
 
 <body>
     <div class="content">
         <div class="background">
-            <div class="checkbox_container"></div>
+            <form class = "colleges_container" action="/" method="POST" id="collegeForm">
+                <button></button>
+            </form>
         </div>
     </div>  
     <script src="colleges.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js"></script>    
 </body>
 </html>

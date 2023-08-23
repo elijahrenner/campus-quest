@@ -14,7 +14,9 @@ with open('dataset 2.csv') as f:
             scols.append(name)
 
             
-with open(filename, 'w') as json_file:
-      json.dump(scols, json_file, indent=4)
+# with open(filename, 'w') as json_file:
+#       json.dump(scols, json_file, indent=4)
 
-
+for i in scols:
+      print(i)
+      time.sleep(.05)
