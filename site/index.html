@@ -9,7 +9,7 @@
             height: 100vh; /* Set the height of both the html and body to 100% of viewport height */
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prevent scrolling */
+            /* overflow: hidden; Prevent scrolling */
         }
         .content {
             height:100vh;
@@ -25,35 +25,35 @@
             width: 90vw;
             border-radius: 10px;
 
-            overflow: auto;
-            background: #555;
+            /* overflow: auto; */
+            background: #f5f5f5;
         }
-        .colleges_container { /* Long list*/
-            background-color: rgb(125, 164, 198);
-            height: 100%;
-            width: 33.33%;
 
-            overflow-y: scroll; /* Scrolling feature*/
-
+        .colleges_container {
+            background-color: rgba(255, 0, 0, 0.249);
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 5 columns */
+            gap: 10px; /* Adjust the gap as needed */
         }
-        .college_container { /* Individual container*/
-            height: 150px;
-            width: 80%;
+
+        .college_container {
+            height: 225px;
+            border-radius: 10px;
             background-color: rgb(183, 222, 255);
-
-            margin-left: 10%;
-
-            display:flex;
-            justify-content:center;
-            align-items:  center;
+            padding: 10px; /* Add padding to each college container as needed */
         }
+
+
 
         .checkbox { /* College name checkbox*/
         }
         
         .calculate {
-            border-color: #555;
+            border-color: #f5f5f5;
         }
+
+        #stepTwo
 
         #map-container {
         position: absolute;
@@ -70,24 +70,31 @@
     </style>
 </head>
 <body>
-    <script src="script.js"></script>
-    <script src="colleges.js"></script>
+    <script src="script.js" defer></script>
+    <script src="institution_names.js"></script>
     <script src="https://storage.googleapis.com/campuscompass/libraries/haversine/haversine.js"></script>
     <script src="https://storage.googleapis.com/campuscompass/libraries/papaparse/papaparse.js"></script>
+    
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>(g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
         ({key: "AIzaSyAkvhajDGjDtkR8Wjxg_w-xAIPBZ1P-dG0", v: "beta"});</script>
+    
     <div class="content">
         <div class="background">
-            <input type="text" id="searchInput" placeholder="Search...">
-            <form class="colleges_container">
-                <button class="calculate" type="button" onclick="calculateDistances()">Calculate</button>
-            </form>
-            <script>filterBySearch()</script>
-
-            <div id="map-container">
-                <div id="map"></div>
+            <div id="stepOne">
+                <input type="text" id="filterBySearch" onkeyup="filterBySearch()" placeholder="Search for schools..">
+                <button type="button" onclick="moveStepTwo()">Calculate</button>
+                <div class="colleges_container"></div>
+                <button id="prev_button">Previous</button>
+                <button id="next_button">Next</button>
             </div>
+            <div id="stepTwo">
+                <button class="back" type="button" onclick="moveStepOne()">Back</button>
+                <div id="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+                
         </div>
     </div>
 </body>
