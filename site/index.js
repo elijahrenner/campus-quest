@@ -1,23 +1,25 @@
-var CSV
 let selectedIds = [];
 let coordinatesObject = {};
 let groupedSchools = []; 
 
-let typingInstance = null;
-let typingTimeout = null;
-
+const USA_BOUNDS = {
+    north: 49.3457868,
+    south: 24.7433195,
+    west: -124.7844079,
+    east: -66.9513812,
+};
 
 function sleep(s) {
     return new Promise(resolve => setTimeout(resolve, s * 1000));
 }    
 
 function makeSelectedIds() {
-    $("#selectedTags .tag").each(function() {
+    $("#selected-tags .tag").each(function() {
         selectedIds.push(($(this).data('value')) -1 );
     });
     return selectedIds;
 }
-    
+
 async function groupSchoolsBySelection() {
     const CSV = await loadCSV();
     selectedIds = await findSelectedIds();
@@ -65,6 +67,17 @@ async function groupSchoolsBySelection() {
     console.log(groupedSchools);
 }
 
+async function loadCSV() {
+    try {
+        const response = await fetch('https://storage.googleapis.com/campuscompass/gravity-set.csv');
+        const csvContent = await response.text();
+        return Papa.parse(csvContent, { header: true }).data;
+    } catch (error) {
+        console.error('Error loading CSV:', error);
+        return [];
+    }
+}
+
 async function groupSchoolsBySearch() {
     console.log("selected ids:" + selectedIds);
 
@@ -79,7 +92,7 @@ async function groupSchoolsBySearch() {
     for (let i = 0; i < numSchools; i++) {
         const school1 = schools[i];
         const loc1 = coordinatesObject[school1];
-        let group = [{ name: school1, id: coordinatesObject[school1].id, site: coordinatesObject[school1].site }];
+        let group = [{ name: school1, id: coordinatesObject[school1].id, site: coordinatesObject[school1].site, city: coordinatesObject[school1].city, state: coordinatesObject[school1].state, city: coordinatesObject[school1].city}];
 
         for (let j = 0; j < numSchools; j++) {
             if (i !== j) {
@@ -98,6 +111,230 @@ async function groupSchoolsBySearch() {
             groupedSchools.push(group);
         }
     }
+    selectedIds.length = 0
+}
+
+function findSelectedIds() {
+    // Use the class selector instead of name
+    const selectors = document.getElementsByClassName("collegeSelectors");
+    return Array.from(selectors).filter(selector => selector.checked).map(selector => selector.id);
+}
+
+async function processCSVData(row, coordinatesObject) {
+    const lat = parseFloat(row['LATITUDE']);
+    const lon = parseFloat(row['LONGITUD']);
+    const id = parseFloat(row['ID'])
+    const website = row['WEBADDR']
+    const city = row['CITY']
+    const state = row['STABBR']
+    coordinatesObject[row['INSTNM']] = { latitude: lat, longitude: lon, id: id, site: website, city: city, state: state};
+}
+
+main();
+async function main() {
+    CSV = await loadCSV();
+
+    let autofillResults = [];
+    async function gatherAutofillData() {
+        try {
+            CSV.forEach(row => {
+                autofillResults.push({value: row['ID'],label: row['INSTNM']});
+            });
+
+            console.log(autofillResults);
+        } catch (error) {
+            console.error("Error gathering autofill data:", error);
+        }
+    }
+
+    $(document).ready(async function() { //typing MECHANICS!
+        await gatherAutofillData();
+        var selectedIndex = -1; // To track the currently selected item index
+        var lastKeyPressTime = 0;
+        var lastKeyCode = null;
+        
+        function filterResults() {
+            var input = $("#searchInput").val().toLowerCase();
+            $("#autofillResults").empty();
+            selectedIndex = -1; // Reset the selectedIndex on new input
+        
+            if (input !== '') {
+                $.each(autofillResults, function (i, item) {
+                    if (item.label.toLowerCase().indexOf(input) !== -1) {
+                        var paragraph = $("<p>").text(item.label).click(function () {
+                            selectTag(item.label, item.value);
+                        });
+                        $("#autofillResults").append(paragraph);
+                    }
+                });
+                $("#autofillResults").show();
+            } else {
+                $("#autofillResults").hide();
+            }
+        }
+        
+        
+        function highlightItem(index) {
+            $("#autofillResults p").removeClass('highlighted');
+            if (index >= 0) {
+                $($("#autofillResults p")[index]).addClass('highlighted');
+        
+                // Scroll to the highlighted item for better visibility if needed
+                $($("#autofillResults p")[index])[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'start'
+                });
+            }
+        }
+        
+    
+        function selectTag(label, value) {
+            // Check if the tag already exists based on the data-value attribute
+            var tagExists = $("#selected-tags").find("[data-value='" + value + "']").length > 0;
+        
+            if (!tagExists) {
+                var tag = $("<span class='selected-tag tag'>").text(label + " \u2297").data('value', value).click(function() {
+                    $(this).remove(); // Remove tag from UI
+                });
+                $("#selected-tags").append(tag);
+            }
+        }
+        
+    
+        function removeMostRecentTag() {
+            var lastTag = $("#selected-tag").last();
+            if (lastTag.length) {
+                lastTag.remove(); // Remove the tag from UI
+            }
+        }
+    
+        $("#searchInput").on("input", filterResults);
+    
+        $("#searchInput").on("keydown", function(e) {
+            var itemCount = $("#autofillResults p").length;
+            var currentTime = new Date().getTime();
+    
+            if (e.keyCode === 40) { // Down arrow
+                selectedIndex = (selectedIndex + 1) % itemCount;
+                highlightItem(selectedIndex);
+                e.preventDefault();
+            } else if (e.keyCode === 38) { // Up arrow
+                selectedIndex = (selectedIndex - 1 + itemCount) % itemCount;
+                highlightItem(selectedIndex);
+                e.preventDefault();
+            } else if (e.keyCode === 13) { // Enter key
+                if (selectedIndex >= 0) {
+                    $($("#autofillResults p")[selectedIndex]).click();
+                } else {
+                    mapFromSearch(); // Call mapFromSearch when Enter is pressed and no item is selected
+                }
+            } else if (e.keyCode === 8) { // Backspace key
+                if ($(this).val() === '' && lastKeyCode === 8 && (currentTime - lastKeyPressTime) < 500) {
+                    removeMostRecentTag();
+                }
+                lastKeyPressTime = currentTime;
+            }
+    
+            lastKeyCode = e.keyCode;
+        });
+        $(".to-map-button").click(mapFromSearch);
+    });   
+
+}
+
+async function mapFromSearch() {
+    let selectedIds = await makeSelectedIds();
+    console.log(selectedIds)
+
+    if (selectedIds.length >= 2) {
+        const uniqueIds = new Set(selectedIds);
+    
+        // Check if there are duplicates by comparing the size of the Set to the length of the array
+        if (uniqueIds.size === selectedIds.length) {
+            coordinatesObject = await groupSchoolsBySearch();
+    
+            console.log(groupedSchools);
+            console.log("Groups: " + (groupedSchools.length));
+    
+            displayTripInformation();
+            async function displayTripInformation() {
+                const tripInfoMenuContainer = document.getElementById('trip-information-menu');
+    
+                var back = document.createElement('button')
+                back.className = "to-search-button"
+                back.onclick = moveToSearch;
+                back.textContent = "Back"
+                tripInfoMenuContainer.appendChild(back)
+
+                var header = document.createElement('h2')
+                
+                if (groupedSchools.length > 1) {
+                    tripText = "trips. 🤩";
+                    header.textContent = "Your schools should be visited in " + groupedSchools.length + " " + tripText;
+                } else {
+                    header.textContent = "Woohoo! You only need one trip. 🎉"
+                }
+                
+                await tripInfoMenuContainer.appendChild(header)
+    
+                groupedSchools.forEach((group, index) => {
+                    const tripContainer = document.createElement('div') //trip container
+                    tripContainer.id = ("trip-" + (index + 1)) //id
+    
+                    tripTitle = document.createElement('h3')
+                    
+                    if (groupedSchools.length <= 1) {
+                        tripTitle.textContent = ("Your trip:")
+                    } else {
+                        tripTitle.textContent = ("Trip " + (index + 1))
+                    }
+                    
+                    tripContainer.appendChild(tripTitle)
+    
+                    group.forEach((school) => {
+                        schoolContainer = document.createElement('div')
+                        schoolContainer.id = school.name
+    
+                        nombre = document.createElement('p')
+                        nombre.textContent = school.name + " (" + school.city + ", " + school.state + ")"
+    
+                        website = document.createElement('a');
+                        website.textContent = school.site;
+                        website.href = school.site;
+    
+                        schoolContainer.appendChild(nombre)
+                        schoolContainer.appendChild(website)
+                        
+                        tripContainer.appendChild(schoolContainer)
+                    })
+                    tripInfoMenuContainer.appendChild(tripContainer)
+                })
+                
+                selected = document.getElementById("selected-tags");
+                selected.remove();
+
+                bar = document.getElementById("searchInput");
+                bar.remove();
+
+                calculate = document.getElementById("to-map-button")
+                calculate.remove();
+
+                initializeMap();
+                findCenterOfSchools(coordinatesObject);
+            }
+    
+        } else {
+            selectedIds.length = 0
+            errorDiv = document.getElementById("errors");
+            errorDiv.textContent = "Oops. Make sure you only select each school once!";
+        }
+    } else {
+        selectedIds.length = 0
+        errorDiv = document.getElementById("errors");
+        errorDiv.textContent = "Please select at least two schools."; // Consider displaying this message in the UI for better user experience
+    }
+    
 }
 
 async function findCenterOfSchools(coordinatesObject) {
@@ -137,273 +374,10 @@ async function initializeMap() {
     initMap();
 }
 
-function findSelectedIds() {
-    // Use the class selector instead of name
-    const selectors = document.getElementsByClassName("collegeSelectors");
-    return Array.from(selectors).filter(selector => selector.checked).map(selector => selector.id);
-}
-
-async function processCSVData(row, coordinatesObject) {
-    const lat = parseFloat(row['LATITUDE']);
-    const lon = parseFloat(row['LONGITUD']);
-    const id = parseFloat(row['ID'])
-    const website = row['WEBADDR']
-    coordinatesObject[row['INSTNM']] = { latitude: lat, longitude: lon, id: id, site: website};
-}
-
-async function loadCSV() {
-    try {
-        const response = await fetch('https://storage.googleapis.com/campuscompass/gravity-set.csv');
-        const csvContent = await response.text();
-        return Papa.parse(csvContent, { header: true }).data;
-    } catch (error) {
-        console.error('Error loading CSV:', error);
-        return [];
-    }
-}
-
-main();
-async function main() {
-    const USA_BOUNDS = {
-        north: 49.3457868,
-        south: 24.7433195,
-        west: -124.7844079,
-        east: -66.9513812,
-    };
-    
-    CSV = await loadCSV();
-
-    let autofillResults = [];
-    async function gatherAutofillData() {
-        try {
-            CSV.forEach(row => {
-                autofillResults.push({value: row['ID'],label: row['INSTNM']});
-            });
-
-            console.log(autofillResults);
-        } catch (error) {
-            console.error("Error gathering autofill data:", error);
-        }
-    }
-
-    $(document).ready(async function() { //typing MECHANICS!
-        await gatherAutofillData();
-        var selectedIndex = -1; // To track the currently selected item index
-        var lastKeyPressTime = 0;
-        var lastKeyCode = null;
-        
-        function filterResults() {
-            var input = $("#searchInput").val().toLowerCase();
-            $("#autofillResults").empty();
-            selectedIndex = -1; // Reset the selectedIndex on new input
-        
-            if(input !== '') {
-                $.each(autofillResults, function(i, item) {
-                    if(item.label.toLowerCase().indexOf(input) !== -1) {
-                        var div = $("<div>").text(item.label).click(function() {
-                            selectTag(item.label, item.value);
-                        });
-                        $("#autofillResults").append(div);
-                    }
-                });
-                $("#autofillResults").show();
-            } else {
-                $("#autofillResults").hide();
-            }
-        }
-        
-        function highlightItem(index) {
-            $("#autofillResults div").removeClass('highlighted');
-            if (index >= 0) {
-                $($("#autofillResults div")[index]).addClass('highlighted');
-            }
-        }
-    
-        function selectTag(label, value) {
-            if(!$("#selectedTags .tag[data-value='" + value + "']").length) {
-                var tag = $("<span>").addClass("tag").text(label).data('value', value).click(function() {
-                    $(this).remove(); // Remove tag from UI
-                });
-                $("#selectedTags").append(tag);
-            }
-        }
-    
-        function removeMostRecentTag() {
-            var lastTag = $("#selectedTags .tag").last();
-            if (lastTag.length) {
-                lastTag.remove(); // Remove the tag from UI
-            }
-        }
-    
-        $("#searchInput").on("input", filterResults);
-    
-        $("#searchInput").on("keydown", function(e) {
-            var itemCount = $("#autofillResults div").length;
-            var currentTime = new Date().getTime();
-    
-            if (e.keyCode === 40) { // Down arrow
-                selectedIndex = (selectedIndex + 1) % itemCount;
-                highlightItem(selectedIndex);
-                e.preventDefault();
-            } else if (e.keyCode === 38) { // Up arrow
-                selectedIndex = (selectedIndex - 1 + itemCount) % itemCount;
-                highlightItem(selectedIndex);
-                e.preventDefault();
-            } else if (e.keyCode === 13) { // Enter key
-                if (selectedIndex >= 0) {
-                    $($("#autofillResults div")[selectedIndex]).click();
-                } else {
-                    mapFromSearch(); // Call mapFromSearch when Enter is pressed and no item is selected
-                }
-            } else if (e.keyCode === 8) { // Backspace key
-                if ($(this).val() === '' && lastKeyCode === 8 && (currentTime - lastKeyPressTime) < 500) {
-                    removeMostRecentTag();
-                }
-                lastKeyPressTime = currentTime;
-            }
-    
-            lastKeyCode = e.keyCode;
-        });
-        $(".to-map-button").click(mapFromSearch);
-    });   
-
-    function getRandomInstitutionName(csvData) {
-        if (csvData.length === 0) {
-            throw new Error("The CSV data is empty");
-        }
-        const randomIndex = Math.floor(Math.random() * csvData.length);
-        return csvData[randomIndex].INSTNM;
-    }
-    
-    async function typeAndDelete() {
-        if (document.getElementById("searchInput").value !== '') {
-            return; // Exit condition to stop the loop
-        }
-    
-        if (typingInstance) {
-            typingInstance.destroy(); // Clear existing instance if any
-        }
-    
-        typingInstance = new TypeIt("#simpleUsage", {
-            lifeLike: true,
-            waitUntilVisible: true,
-        });
-    
-        await typingInstance.type(getRandomInstitutionName(CSV)).go();
-        await typingInstance.pause(Math.floor(Math.random() * (1200 - 800 + 1)) + 800);
-        await typingInstance.delete();
-    
-        // Call the function again to create a continuous loop
-        typeAndDelete();
-    }
-    
-    document.getElementById("searchInput").addEventListener("input", () => {
-        if (typingInstance) {
-            typingInstance.destroy(); // Stop ongoing typing
-            typingInstance = null;
-        }
-        clearTimeout(typingTimeout); // Clear the timeout to prevent re-triggering the typing
-    
-        const inputVal = document.getElementById("searchInput").value;
-        document.getElementById("simpleUsage").innerHTML = ''; // Clear the content of the typing area
-    
-        if (inputVal === '') {
-            // Only start typing again if the input box is empty and there's no ongoing typing
-            typeAndDelete();
-        }
-
-    });
-    typeAndDelete();
-
-}
-
-async function mapFromSearch() {
-    const stepOne = document.getElementById("stepOne");
-    const stepTwo = document.getElementById("stepTwo");
-
-    let selectedIds = await makeSelectedIds();
-    console.log(selectedIds)
-
-
-    if (selectedIds.length >= 2) {
-        const uniqueIds = new Set(selectedIds);
-    
-        // Check if there are duplicates by comparing the size of the Set to the length of the array
-        if (uniqueIds.size === selectedIds.length) {
-            coordinatesObject = await groupSchoolsBySearch();
-            findCenterOfSchools(coordinatesObject);
-            initializeMap();
-    
-            stepOne.style.display = "none";
-            stepTwo.style.display = "block";
-    
-            console.log(groupedSchools);
-            console.log("Groups: " + (groupedSchools.length));
-    
-            displayTripInformation();
-            async function displayTripInformation() {
-                const tripInfoMenuContainer = document.getElementById('trip-information-menu');
-    
-                var header = document.createElement('h1')
-                
-                let tripText = "trip is required to visit all schools.";
-                if (groupedSchools.length > 1) {
-                    tripText = "trips are required to visit all schools.";
-                }
-                header.textContent = groupedSchools.length + " " + tripText;
-                await tripInfoMenuContainer.appendChild(header)
-    
-                groupedSchools.forEach((group, index) => {
-                    const tripContainer = document.createElement('div') //trip container
-                    tripContainer.id = ("trip-" + (index + 1)) //id
-    
-                    tripTitle = document.createElement('h2')
-                    tripTitle.textContent = ("Trip " + (index + 1))
-                    tripContainer.appendChild(tripTitle)
-    
-    
-    
-                    group.forEach((school) => {
-                        schoolContainer = document.createElement('div')
-                        schoolContainer.id = school.name
-    
-                        nombre = document.createElement('p')
-                        nombre.textContent = school.name
-    
-                        website = document.createElement('p')
-                        website.textContent = school.site
-    
-                        schoolContainer.appendChild(nombre)
-                        schoolContainer.appendChild(website)
-                        
-                        tripContainer.appendChild(schoolContainer)
-                    })
-                    
-    
-    
-    
-                    tripInfoMenuContainer.appendChild(tripContainer)
-                })
-            }
-    
-        } else {
-            selectedIds.length = 0
-            console.log("Duplicate IDs");
-        }
-    } else {
-        selectedIds.length = 0
-        console.log("<2 schools"); // Consider displaying this message in the UI for better user experience
-    }
-    
-}
-
 async function moveToSearch() {
-    const stepOne = document.getElementById("stepOne");
-    const stepTwo = document.getElementById("stepTwo");
-
-    $("#selectedTags").html("");
+    $("#selected-tags").html("");
     selectedIds.length = 0
-
-    stepOne.style.display = "block";
-    stepTwo.style.display = "none";
+    window.open("index.html","_self")
 }
+
+
