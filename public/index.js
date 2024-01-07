@@ -194,7 +194,7 @@ async function main() {
             var tagExists = $("#selected-tags").find("[data-value='" + value + "']").length > 0;
         
             if (!tagExists) {
-                var tag = $("<span class='selected-tag tag'>").text(label + " \u2297").data('value', value).click(function() {
+                var tag = $("<span class='selected-tag tag'>").text(label + " ✕").data('value', value).click(function() {
                     $(this).remove(); // Remove tag from UI
                 });
                 $("#selected-tags").append(tag);
@@ -229,11 +229,14 @@ async function main() {
                 } else {
                     mapFromSearch(); // Call mapFromSearch when Enter is pressed and no item is selected
                 }
+            
             } else if (e.keyCode === 8) { // Backspace key
                 if ($(this).val() === '' && lastKeyCode === 8 && (currentTime - lastKeyPressTime) < 500) {
                     removeMostRecentTag();
                 }
                 lastKeyPressTime = currentTime;
+            } else if (e.keyCode === 27) { // Escape key
+                moveToSearch();
             }
     
             lastKeyCode = e.keyCode;
@@ -298,10 +301,11 @@ async function mapFromSearch() {
     
                         nombre = document.createElement('p')
                         nombre.textContent = school.name + " (" + school.city + ", " + school.state + ")"
-    
-                        website = document.createElement('a');
+                        
+                        var website = document.createElement('a');
+                        website.setAttribute('href', '#');
+                        website.setAttribute('onclick', "window.location.href='" + "https://" + school.site + "'; return false;");
                         website.textContent = school.site;
-                        website.href = school.site;
     
                         schoolContainer.appendChild(nombre)
                         schoolContainer.appendChild(website)
