@@ -11,5 +11,7 @@ Campus Compass uses data from the National Center for Education Statistics. The 
 
 ## acknowledgements
 All data sourced from https://nces.ed.gov
+
 Haversine https://www.npmjs.com/package/haversine
-Papaparse https://www.npmjs.com/package/papaparse
+
+|Papaparse https://www.npmjs.com/package/papaparse
