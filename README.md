@@ -3,7 +3,7 @@ A tool designed to allow prospective students of multiple colleges a way to orga
 
 ## demo
 
-campusquest.org
+https://campusquest.org
 
 ## description
 
