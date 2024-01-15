@@ -3,7 +3,7 @@ A tool designed to allow prospective students of multiple colleges a way to orga
 
 ## demo
 
-https://campusquest.org or https://campuscompass-d294e.firebaseapp.com/
+https://campusquest.org or [https://campuscompass-d294e.firebaseapp.com/](https://campusquest-f9a76.firebaseapp.com/)
 
 ## description
 
